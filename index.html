@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Carga Bootstrap desde CDN para evitar problemas de rutas locales -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Lista de Usuarios</title>
+</head>
+
+<body class="container mt-4">
+
+  <h2>Lista de Usuarios</h2>
+<!-- Button trigger modal -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+  Agregar usuarios
+</button>
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th scope="col">Código</th>
+        <th scope="col">Nombre</th>
+        <th scope="col">Apellidos</th>
+        <th scope="col">Correo</th>
+      </tr>
+    </thead>
+    <tbody id="tabla-usuarios">
+      <!-- Los datos se insertarán aquí -->
+    </tbody>
+  </table>
+
+  <!-- Modal -->
+   <form method="POST" id="miformulario">
+
+   <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Modal title</h1>
+    
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+         <label for="">Nombre</label>
+         <input type="text" class="form-control" id="nombre">
+         <label for="">Apellido</label>
+         <input type="text" class="form-control" id="apellido">
+         <label for="">Correo</label>
+         <input type="email" class="form-control" id="correo">
+         <label for="">Password</label>
+         <input type="password" class="form-control" id="password">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
+<!-- Fin Modal -->
+
+
+  <!-- 1. Cargar Usuarios -->
+<script>
+  async function cargarUsuarios() {
+    try {
+      const response = await fetch('http://localhost:3000/usuarios');
+
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
+      }
+
+      const usuarios = await response.json();
+      console.log('Datos recibidos de la BD:', usuarios);
+
+      const tbody = document.getElementById('tabla-usuarios');
+      tbody.innerHTML = '';
+
+      usuarios.forEach(usuario => {
+        const id = usuario.id || usuario.codigo;
+        const fila = document.createElement('tr');
+
+        fila.innerHTML = `
+          <td>${id}</td>
+          <td>${usuario.nombre}</td>
+          <td>${usuario.apellidos || usuario.apellido}</td>
+          <td>${usuario.correo || usuario.email}</td>
+          <td>
+            <button class="btn btn-warning btn-sm" onclick="editar('${id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminar('${id}')">🗑️</button>
+          </td>
+        `;
+
+        tbody.appendChild(fila);
+      });
+
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+    }
+  }
+
+  cargarUsuarios();
+</script>
+
+<!-- 2. Registrar Usuario -->
+<script>
+  const formulario = document.getElementById("miformulario");
+  formulario.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    try {
+      const nombre = document.getElementById("nombre").value;
+      const apellido = document.getElementById('apellido').value;
+      const correo = document.getElementById('correo').value;
+      const password = document.getElementById('password').value;
+
+      const data = {
+        nombre: nombre,
+        apellidos: apellido,
+        correo: correo,
+        password: password
+      };
+
+      const response = await fetch('http://localhost:3000/usuarios', {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al registrar: ${response.status}`);
+      }
+
+      cargarUsuarios();
+    } catch (error) {
+      console.error('Error en el registro:', error);
+      alert('Error al registrar el usuario');
+    }
+  });
+</script>
+
+<!-- 3. Eliminar usuario -->
+<script>
+  async function eliminar(id) {
+    try {
+      const response = await fetch(`http://localhost:3000/usuarios/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
+      }
+
+      cargarUsuarios();
+      
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      alert('Error de conexión con el servidor');
+    }
+  }
+</script>
+
+<!-- 4. Editar usuario (Obtener datos y Actualizar) -->
+<script>
+  async function editar(id) {
+    try {
+      const res = await fetch(`http://localhost:3000/usuarios/${correo}`);
+
+      if (!res.ok) {
+        throw new Error(`Error HTTP: ${res.status}`);
+      }
+
+      const resultado = await res.json();
+      const u = resultado.data || resultado;
+
+      const form = document.getElementById("miformulario");
+      if (form.querySelector('[name="id"]')) form.querySelector('[name="id"]').value = u.id || id;
+      if (form.querySelector('[name="nombre"]')) form.querySelector('[name="nombre"]').value = u.nombre || '';
+      if (form.querySelector('[name="email"]')) form.querySelector('[name="email"]').value = u.email || u.correo || '';
+
+      new bootstrap.Modal(document.getElementById('exampleModal')).show();
+    } catch (error) {
+      console.error('Error al obtener datos del usuario:', error);
+      alert('Error de conexión con el servidor');
+    }
+  }
+
+  async function actualizarUsuario(id, data) {
+    try {
+      const response = await fetch(`http://localhost:3000/usuarios/${correo}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error HTTP: ${response.status}`);
+      }
+
+      cargarUsuarios(); 
+    } catch (error) {
+      console.error('Error al actualizar usuario:', error);
+      alert('Error de conexión al actualizar');
+    }
+  }
+</script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+
+</html>
